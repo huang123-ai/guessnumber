@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>猜数字游戏 - 网页版</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            margin-top: 80px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            width: 450px;
+            margin: 0 auto;
+            padding: 30px;
+            border-radius: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+        }
+        input {
+            padding: 12px;
+            font-size: 18px;
+            width: 160px;
+            text-align: center;
+            margin: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 5px;
+            transition: 0.2s;
+        }
+        button:hover {
+            transform: scale(1.02);
+            background-color: #45a049;
+        }
+        .difficulty-btn {
+            background-color: #ff9800;
+        }
+        .difficulty-btn:hover {
+            background-color: #e68900;
+        }
+        .message {
+            margin: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            min-height: 70px;
+        }
+        .stats {
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 15px;
+            margin: 15px 0;
+        }
+        .new-game-btn {
+            background-color: #2196F3;
+        }
+        .new-game-btn:hover {
+            background-color: #0b7dda;
+        }
+        footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🔢 猜数字游戏</h1>
+    <p>🤔 我已经想好了一个数字</p>
+    
+    <input type="number" id="guessInput" placeholder="输入数字" min="1" id="guessInput">
+    <button id="guessBtn">猜！</button>
+    
+    <div class="message" id="message">✨ 点击“猜！”开始挑战 ✨</div>
+    
+    <div class="stats">
+        <div>📊 已猜次数: <span id="attemptCount">0</span></div>
+        <div>🏆 历史最佳: <span id="bestRecord">无</span></div>
+    </div>
+    
+    <div>
+        <button id="newGameBtn" class="new-game-btn">🎮 新的一局</button>
+        <button id="easyBtn" class="difficulty-btn">🌱 简单 (1-50)</button>
+        <button id="mediumBtn" class="difficulty-btn">⚖️ 中等 (1-100)</button>
+        <button id="hardBtn" class="difficulty-btn">🔥 困难 (1-200)</button>
+    </div>
+    
+    <footer>提示：猜中后需点击“新的一局”继续玩</footer>
+</div>
+
+<script>
+    // ---------- 游戏状态 ----------
+    let secretNumber = Math.floor(Math.random() * 100) + 1;
+    let attempts = 0;
+    let bestScore = null;
+    let gameActive = true;
+    let currentMax = 100;  // 记录当前范围最大值
+    
+    // DOM 元素
+    const guessInput = document.getElementById('guessInput');
+    const guessBtn = document.getElementById('guessBtn');
+    const newGameBtn = document.getElementById('newGameBtn');
+    const easyBtn = document.getElementById('easyBtn');
+    const mediumBtn = document.getElementById('mediumBtn');
+    const hardBtn = document.getElementById('hardBtn');
+    const messageDiv = document.getElementById('message');
+    const attemptSpan = document.getElementById('attemptCount');
+    const bestSpan = document.getElementById('bestRecord');
+    
+    // 更新界面显示次数
+    function updateUI() {
+        attemptSpan.innerText = attempts;
+        if (bestScore !== null) {
+            bestSpan.innerText = bestScore;
+        } else {
+            bestSpan.innerText = '无';
+        }
+    }
+    
+    // 重置游戏（不改变秘密数字，只重置状态）
+    function resetGameState() {
+        attempts = 0;
+        gameActive = true;
+        guessBtn.disabled = false;
+        guessInput.disabled = false;
+        guessInput.value = "";
+        updateUI();
+        guessInput.focus();
+    }
+    
+    // 开始新游戏（根据当前范围生成新数字）
+    function newGame() {
+        // 根据 currentMax 生成对应范围的随机数
+        secretNumber = Math.floor(Math.random() * currentMax) + 1;
+        resetGameState();
+        
+        let rangeText = "";
+        if (currentMax === 50) rangeText = "1-50";
+        else if (currentMax === 100) rangeText = "1-100";
+        else rangeText = "1-200";
+        
+        messageDiv.innerHTML = `✨ 新的一局！范围 ${rangeText}，输入你的猜测 ✨`;
+        console.log("新游戏，秘密数字是:", secretNumber);
+    }
+    
+    // 设置难度
+    function setDifficulty(maxValue, modeName, tipText) {
+        currentMax = maxValue;
+        secretNumber = Math.floor(Math.random() * currentMax) + 1;
+        resetGameState();
+        messageDiv.innerHTML = `${tipText} 范围 1-${maxValue}，开始新游戏吧！`;
+        console.log(`${modeName}模式，秘密数字是:`, secretNumber);
+    }
+    
+    // 猜数字逻辑
+    function checkGuess() {
+        if (!gameActive) {
+            messageDiv.innerHTML = "🏁 游戏已结束，请点击「新的一局」继续挑战！";
+            return;
+        }
+        
+        const rawValue = guessInput.value;
+        if (rawValue === "") {
+            messageDiv.innerHTML = "⚠️ 请输入一个数字！";
+            return;
+        }
+        const guess = Number(rawValue);
+        
+        if (isNaN(guess) || guess < 1 || guess > currentMax) {
+            messageDiv.innerHTML = `⚠️ 请输入 1~${currentMax} 之间的有效数字！`;
+            return;
+        }
+        
+        attempts++;
+        updateUI();
+        
+        if (guess === secretNumber) {
+            messageDiv.innerHTML = `🎉🎉🎉 恭喜猜中了！ 数字就是 ${secretNumber}，用了 ${attempts} 次 🎉🎉🎉`;
+            if (bestScore === null || attempts < bestScore) {
+                bestScore = attempts;
+                updateUI();
+                messageDiv.innerHTML += " 🌟 刷新历史最佳纪录！ 🌟";
+            }
+            gameActive = false;
+            guessBtn.disabled = true;
+            guessInput.disabled = true;
+            return;
+        } 
+        
+        if (guess > secretNumber) {
+            messageDiv.innerHTML = "📈 猜大了！ 再试试看～";
+        } else {
+            messageDiv.innerHTML = "📉 猜小了！ 再试试看～";
+        }
+        
+        guessInput.value = "";
+        guessInput.focus();
+    }
+    
+    // 绑定按钮事件
+    guessBtn.addEventListener('click', checkGuess);
+    newGameBtn.addEventListener('click', newGame);
+    easyBtn.addEventListener('click', function() { setDifficulty(50, "简单", "🌱 简单模式已开启"); });
+    mediumBtn.addEventListener('click', function() { setDifficulty(100, "中等", "⚖️ 中等模式已开启"); });
+    hardBtn.addEventListener('click', function() { setDifficulty(200, "困难", "🔥 困难模式已开启"); });
+    
+    guessInput.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            checkGuess();
+        }
+    });
+    
+    window.onload = function() {
+        messageDiv.innerHTML = "🎲 游戏已启动！范围 1-100，输入你的第一个猜测吧 🎲";
+        guessInput.focus();
+    };
+</script>
+</body>
+</html>
